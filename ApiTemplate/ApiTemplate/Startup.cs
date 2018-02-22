@@ -32,19 +32,15 @@ namespace ApiTemplate
         {
             string key = Configuration.GetValue<string>("Data:SecureKey");
 
-            services.AddAuthentication(options =>
-                {
-                    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
-                    options.DefaultChallengeScheme = "JwtBearer";
-                })
-                .AddJwtBearer("JwtBearer", jwtBearerOptions =>
+            services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+                .AddJwtBearer(jwtBearerOptions =>
                 {
                     jwtBearerOptions.TokenValidationParameters = new TokenValidationParameters()
                     {
                         ValidateIssuerSigningKey = true,
                         IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(key)),
                         ValidateIssuer = true,
-                        ValidIssuer = "TestAPI",
+                        ValidIssuer = "TestApi",
                         ValidateAudience = true,
                         ValidAudience = "TestApp",
                         ValidateLifetime = true,
@@ -52,6 +48,17 @@ namespace ApiTemplate
                     };
 
                 });
+
+            services.AddCors(options =>
+            {
+                options.AddPolicy("CorsPolicy",
+                    builder => builder.AllowAnyOrigin()
+                        .AllowAnyMethod()
+                        .AllowAnyHeader()
+                        .AllowCredentials()
+                        .Build());
+            });
+
 
             //Add ability to read from appsettings.json
             services.AddTransient<DbInitializer>();
@@ -62,9 +69,9 @@ namespace ApiTemplate
                 options.UseSqlServer(Configuration.GetConnectionString("DefaultConnection")));
 
             //Identity
-            services.AddIdentity<ApiUser, ApiRole>()
-                .AddEntityFrameworkStores<ApiContext>()
-                .AddDefaultTokenProviders();
+            //services.AddIdentity<ApiUser, ApiRole>()
+            //    .AddEntityFrameworkStores<ApiContext>()
+            //    .AddDefaultTokenProviders();
 
             //MVC
             services.AddMvc();
@@ -83,6 +90,7 @@ namespace ApiTemplate
             }
 
             app.UseAuthentication();
+            app.UseCors("CorsPolicy");
             app.UseMvc();
             dbInitializer.Initialize(context);
         }

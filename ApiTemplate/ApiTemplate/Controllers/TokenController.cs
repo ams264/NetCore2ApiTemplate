@@ -8,6 +8,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Authorization.Infrastructure;
 using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
@@ -16,7 +17,7 @@ using Microsoft.IdentityModel.Tokens;
 
 namespace ApiTemplate
 {
-    [Route("/token")]
+    [Route("api/[controller]/[action]")]
     public class TokenController : Controller
     {
         private readonly IConfiguration _config;
@@ -24,17 +25,28 @@ namespace ApiTemplate
         public TokenController(IConfiguration config)
         {
             _config = config;
-            _key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_config["SecureKey"]));
+            string key = _config["Data:SecureKey"];
+            _key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(key));
         }
 
-        [HttpPost]
-        public IActionResult Create(string username, string password)
+        [AllowAnonymous]
+        [HttpGet]
+        public string Test()
         {
-            if (IsValidUsernameAndPassword(username, password))
+            return "Success";
+        }
+
+        [AllowAnonymous]
+        [HttpPost]
+
+        public IActionResult Create([FromBody]LoginModel login)
+        {
+            IActionResult response = Unauthorized();
+            if (IsValidUsernameAndPassword(login.Username, login.Password))
             {
-                return new ObjectResult(GenerateToken(username));
+                response = Ok(new ObjectResult(GenerateToken(login.Username)));
             }
-            return BadRequest();
+            return response;
         }
 
         private bool IsValidUsernameAndPassword(string username, string password)
@@ -62,6 +74,12 @@ namespace ApiTemplate
             );
 
             return new JwtSecurityTokenHandler().WriteToken(token);
+        }
+
+        public class LoginModel
+        {
+            public string Username { get; set; }
+            public string Password { get; set; }
         }
     }
 }
